@@ -1,0 +1,244 @@
+CREATE TABLE Sales (
+    SaleID INT PRIMARY KEY,
+    SaleDate DATE,
+    Region VARCHAR(50),
+    SalesAmount DECIMAL(10, 2)
+);
+
+CREATE TABLE Employees (
+    EmployeeID INT PRIMARY KEY,
+    Name VARCHAR(100),
+    ExperienceYears INT,
+    PerformanceRating INT
+);
+
+INSERT INTO Sales (SaleID, SaleDate, Region, SalesAmount) VALUES
+(1, '2024-01-15', 'East', 1500.00),
+(2, '2024-02-20', 'West', 3000.00),
+(3, '2024-03-05', 'East', 2000.00),
+(4, '2024-04-10', 'North', 500.00),
+(5, '2024-05-25', 'East', 2500.00);
+
+INSERT INTO Employees (EmployeeID, Name, ExperienceYears, PerformanceRating) VALUES
+(1, 'Alice', 5, 4),
+(2, 'Bob', 2, 3),
+(3, 'Charlie', 10, 5),
+(4, 'Diana', 1, 2),
+(5, 'Eve', 7, 4);
+
+--Example 1: Nested CASE Evaluation -
+
+SELECT SaleID, 
+       SalesAmount,
+       CASE 
+           WHEN SalesAmount > 2000 THEN 
+               CASE 
+                   WHEN Region = 'East' THEN 'High (East)'
+                   ELSE 'High (Other)'
+               END
+           WHEN SalesAmount BETWEEN 1000 AND 2000 THEN 'Medium'
+           ELSE 'Low'
+       END AS SalesCategory
+FROM Sales;
+
+
+--Example 2: Conditional Aggregation
+
+SELECT 
+	SUM(CASE WHEN Region = 'East' AND SalesAmount > 1000 THEN SalesAmount ELSE 0 END) AS TotalEastHighSales
+FROM Sales;
+
+Example 3: Dynamic Grouping
+
+SELECT 
+    CASE 
+        WHEN MONTH(SaleDate) BETWEEN 1 AND 3 THEN 'Q1'
+        WHEN MONTH(SaleDate) BETWEEN 4 AND 6 THEN 'Q2'
+        WHEN MONTH(SaleDate) BETWEEN 7 AND 9 THEN 'Q3'
+        ELSE 'Q4'
+    END AS Quarter,
+    SUM(SalesAmount) AS TotalSales
+FROM Sales
+GROUP BY 
+    CASE 
+        WHEN MONTH(SaleDate) BETWEEN 1 AND 3 THEN 'Q1'
+        WHEN MONTH(SaleDate) BETWEEN 4 AND 6 THEN 'Q2'
+        WHEN MONTH(SaleDate) BETWEEN 7 AND 9 THEN 'Q3'
+        ELSE 'Q4'
+    END;
+
+--Example 4: Handling Multiple Conditions
+
+SELECT EmployeeID, Name,
+       CASE 
+           WHEN ExperienceYears > 5 AND PerformanceRating >= 4 THEN 'Senior'
+           ELSE 'Junior'
+       END AS EmployeeCategory
+FROM Employees;
+
+--Example 5: Complex CASE with JOIN
+
+SELECT s.SaleID, s.SalesAmount, e.Name,
+       CASE 
+           WHEN s.Region = 'East' THEN e.PerformanceRating
+           ELSE s.SalesAmount
+       END AS Metric
+FROM Sales s
+JOIN Employees e ON s.SaleID = e.EmployeeID;
+
+--Example 6: Data Transformation
+
+SELECT SaleID, 
+       CASE 
+           WHEN CHARINDEX('/', SaleDate) > 0 THEN CONVERT(DATE, SaleDate, 101)
+           WHEN CHARINDEX('-', SaleDate) > 0 THEN CONVERT(DATE, SaleDate, 23)
+           ELSE SaleDate
+       END AS StandardizedDate
+FROM Sales;
+
+--Example 7: Conditional Filtering in Subqueries
+
+SELECT EmployeeID, Name,
+       (SELECT SUM(SalesAmount)
+        FROM Sales s
+        WHERE s.Region = 
+              CASE 
+                  WHEN e.PerformanceRating >= 4 THEN 'East'
+                  ELSE 'West'
+              END) AS TotalSales
+FROM Employees e;
+
+--Example 8: Conditional Ranking
+
+SELECT EmployeeID, Name,
+       RANK() OVER (ORDER BY 
+                    CASE 
+                        WHEN PerformanceRating >= 4 THEN ExperienceYears 
+                        ELSE PerformanceRating 
+                    END DESC) AS Rank
+FROM Employees;
+
+--Example 10: Handling NULLs and Defaults
+
+SELECT EmployeeID, Name,
+       COALESCE(NULLIF(PerformanceRating, 0), 'Not Rated') AS Performance
+FROM Employees;
+
+-----------------------------------
+--1. Pivoting Sales Data by Product (Objective: Pivot the sales data to show total sales for each product on each date.)
+
+CREATE TABLE Sales (
+    SaleID INT PRIMARY KEY,
+    ProductName VARCHAR(100),
+    SaleAmount DECIMAL(10, 2),
+    SaleDate DATE
+);
+
+INSERT INTO Sales (SaleID, ProductName, SaleAmount, SaleDate) VALUES
+(1, 'Product A', 100.00, '2024-08-01'),
+(2, 'Product B', 200.00, '2024-08-01'),
+(3, 'Product A', 150.00, '2024-08-02'),
+(4, 'Product C', 250.00, '2024-08-02'),
+(5, 'Product B', 300.00, '2024-08-03');
+
+SELECT
+    SaleDate,
+    SUM(CASE WHEN ProductName = 'Product A' THEN SaleAmount ELSE 0 END) AS ProductA_Sales,
+    SUM(CASE WHEN ProductName = 'Product B' THEN SaleAmount ELSE 0 END) AS ProductB_Sales,
+    SUM(CASE WHEN ProductName = 'Product C' THEN SaleAmount ELSE 0 END) AS ProductC_Sales
+FROM Sales
+GROUP BY SaleDate;
+
+--2. Pivoting Attendance Data by Day (Objective: Pivot attendance data to show the status of each employee by date.)
+
+CREATE TABLE Attendance (
+    AttendanceID INT PRIMARY KEY,
+    EmployeeName VARCHAR(100),
+    AttendanceDate DATE,
+    Status VARCHAR(10)
+);
+
+INSERT INTO Attendance (AttendanceID, EmployeeName, AttendanceDate, Status) VALUES
+(1, 'Alice', '2024-08-01', 'Present'),
+(2, 'Bob', '2024-08-01', 'Absent'),
+(3, 'Alice', '2024-08-02', 'Present'),
+(4, 'Bob', '2024-08-02', 'Present'),
+(5, 'Charlie', '2024-08-02', 'Absent');
+
+SELECT
+    AttendanceDate,
+    MAX(CASE WHEN EmployeeName = 'Alice' THEN Status ELSE NULL END) AS Alice_Status,
+    MAX(CASE WHEN EmployeeName = 'Bob' THEN Status ELSE NULL END) AS Bob_Status,
+    MAX(CASE WHEN EmployeeName = 'Charlie' THEN Status ELSE NULL END) AS Charlie_Status
+FROM Attendance
+GROUP BY AttendanceDate;
+
+--3. Pivoting Survey Responses by Question (Objective: Pivot survey responses to show answers by respondent for each question.)
+
+CREATE TABLE SurveyResponses (
+    ResponseID INT PRIMARY KEY,
+    RespondentID INT,
+    Question VARCHAR(100),
+    Answer VARCHAR(100)
+);
+
+INSERT INTO SurveyResponses (ResponseID, RespondentID, Question, Answer) VALUES
+(1, 1, 'Q1', 'Yes'),
+(2, 1, 'Q2', 'No'),
+(3, 2, 'Q1', 'No'),
+(4, 2, 'Q2', 'Yes'),
+(5, 3, 'Q1', 'Yes');
+
+SELECT
+    RespondentID,
+    MAX(CASE WHEN Question = 'Q1' THEN Answer ELSE NULL END) AS Q1_Answer,
+    MAX(CASE WHEN Question = 'Q2' THEN Answer ELSE NULL END) AS Q2_Answer
+FROM SurveyResponses
+GROUP BY RespondentID;
+
+--4. Pivoting Order Data by Month (Objective: Pivot order data to show total order amounts by customer for each month.)
+
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY,
+    CustomerName VARCHAR(100),
+    OrderAmount DECIMAL(10, 2),
+    OrderMonth VARCHAR(10)
+);
+
+INSERT INTO Orders (OrderID, CustomerName, OrderAmount, OrderMonth) VALUES
+(1, 'Alice', 300.00, 'January'),
+(2, 'Bob', 500.00, 'February'),
+(3, 'Alice', 200.00, 'March'),
+(4, 'Charlie', 400.00, 'January'),
+(5, 'Bob', 150.00, 'March');
+
+SELECT
+    CustomerName,
+    SUM(CASE WHEN OrderMonth = 'January' THEN OrderAmount ELSE 0 END) AS January_Orders,
+    SUM(CASE WHEN OrderMonth = 'February' THEN OrderAmount ELSE 0 END) AS February_Orders,
+    SUM(CASE WHEN OrderMonth = 'March' THEN OrderAmount ELSE 0 END) AS March_Orders
+FROM Orders
+GROUP BY CustomerName;
+
+--5. Pivoting Exam Scores by Subject (Objective: Pivot exam scores to show the score of each student for each subject.)
+
+CREATE TABLE ExamScores (
+    ExamID INT PRIMARY KEY,
+    StudentName VARCHAR(100),
+    Subject VARCHAR(100),
+    Score INT
+);
+
+INSERT INTO ExamScores (ExamID, StudentName, Subject, Score) VALUES
+(1, 'Alice', 'Math', 85),
+(2, 'Bob', 'Science', 90),
+(3, 'Charlie', 'Math', 75),
+(4, 'Alice', 'Science', 95),
+(5, 'Bob', 'Math', 80);
+
+SELECT
+    StudentName,
+    MAX(CASE WHEN Subject = 'Math' THEN Score ELSE NULL END) AS Math_Score,
+    MAX(CASE WHEN Subject = 'Science' THEN Score ELSE NULL END) AS Science_Score
+FROM ExamScores
+GROUP BY StudentName;
